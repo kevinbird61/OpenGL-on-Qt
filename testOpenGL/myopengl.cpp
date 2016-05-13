@@ -2,9 +2,12 @@
 
 MyOpenGL::MyOpenGL(QWidget *parent) : QGLWidget(parent)
 {
+    // Setting the format
     QGLFormat format;
     format.setVersion(3,3);
     format.setProfile(QGLFormat::CoreProfile);
+    format.setSampleBuffers(true);
+    format.setSamples(4);
     format.setSwapInterval(1);
     format.setDepth(true);
     setFormat(format);
@@ -15,6 +18,8 @@ MyOpenGL::MyOpenGL(QWidget *parent) : QGLWidget(parent)
     current_fs = QString("Shader/flat_fragmentShader.frag");
     current_value = 0;
     filter = 0;
+    rotate_speed = 0;
+    changeSigma(0.1);
     // Setting Timer to update
     timer = new QTimer(this);
     connect(timer,SIGNAL(timeout()),this,SLOT(update()));
@@ -158,14 +163,22 @@ void MyOpenGL::reloadShader(const char *vertex_shader, const char *fragment_shad
     // Need to destroy the old program
     releaseObject();
 
-    program = new QOpenGLShaderProgram();
+    //program = new QOpenGLShaderProgram();
 
     program = setup_shader(vertex_shader,fragment_shader);
 
-    sun = add_obj(program,pic_obj,pic_src);
+    add_obj(program,pic_obj,pic_src);
 
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
+
+    QMatrix4x4 proj;
+    proj.perspective(45.0f,640.0f/480,1.0f,100.0f);
+    QMatrix4x4 view;
+    view.lookAt(camera,QVector3D(0,0,0),QVector3D(0,1,0));
+    QMatrix4x4 model;
+    model.scale(1.0f);
+    setVS(program,proj,view,model);
 }
 
 void MyOpenGL::releaseObject()
@@ -173,19 +186,26 @@ void MyOpenGL::releaseObject()
     for(int i=0;i<objects.size();i++){
         // Release the VAO
         objects[i]->vao->release();
+        objects[i]->vao->destroy();
         // Release the Texture sampler
         objects[i]->texture->release();
+        objects[i]->texture->destroy();
         // Release the VBO
         objects[i]->vbo_indices->release();
+        objects[i]->vbo_indices->destroy();
         objects[i]->vbo_normals->release();
+        objects[i]->vbo_normals->destroy();
         objects[i]->vbo_position->release();
+        objects[i]->vbo_position->destroy();
         objects[i]->vbo_texture->release();
+        objects[i]->vbo_texture->destroy();
         // Delete the original Program
         objects[i]->program->removeAllShaders();
         objects[i]->program->release();
         objects[i]->program->destroyed();
         // Pop out the objects
         objects.pop_back();
+        indicesCount.pop_back();
     }
 }
 
@@ -206,11 +226,27 @@ void MyOpenGL::render()
     }
 }
 
+void MyOpenGL::normalizeAndset(int x, int y)
+{
+    // Normalize
+    float xpos = (float)x / (float) this->width();
+    float ypos = 1.0 - ((float)y / (float) this->height());
+    // Set
+    QVector2D twoD = QVector2D(xpos,ypos);
+    RTX_program->setUniformValue(RTX_program->uniformLocation("mouseLoc"),twoD);
+    //cout<< "Moving Position X : "<< xpos << " Y: " << ypos << endl;
+}
+
 void MyOpenGL::mousePressEvent(QMouseEvent *e)
 {
-    // Get the place what we need to blur
+    cout<< "Press Position X : "<< e->pos().x() << " Y: " << e->pos().y() << endl;
+}
 
-    cout<< "Press"<< e->pos().x() << endl;
+void MyOpenGL::mouseMoveEvent(QMouseEvent *e)
+{
+    // Get the place what we need to blur
+    // Normalize the position
+    normalizeAndset(e->pos().x() , e->pos().y());
 }
 
 void MyOpenGL::changeShader(QString string)
@@ -242,6 +278,7 @@ void MyOpenGL::changeShader(QString string)
         current_vs = QString("Shader/Blinn_vertexShader.vs");
         current_fs = QString("Shader/Blinn_fragmentShader.frag");
         cout<< "Blinn-Phong OK" << endl;
+
     }
     else{
         // Exception
@@ -303,18 +340,49 @@ void MyOpenGL::changePicObj(QString string)
     }
 }
 
+void MyOpenGL::changeXModel(int value)
+{
+    value = value - 50;
+    rotate_speed = (float)value*0.005;
+}
+
+void MyOpenGL::changeSigma(double sigma)
+{
+    float result = 0.0;
+    // For calculating
+    for(int i = 0 ; i < 3 ; i++)
+    {
+        for(int j = 0; j < 3 ; j++)
+        {
+            Gaussian(i,j) = (1.0f/(2.0f*(3.1415926)*sigma*sigma))*qExp(-((i-1)*(i-1)+(j-1)*(j-1))/(2.0f*sigma*sigma));
+            result += Gaussian(i,j);
+        }
+    }
+    // For normalize
+    for(int i = 0 ; i < 3 ; i++)
+    {
+        for(int j = 0; j < 3 ; j++)
+        {
+            Gaussian(i,j) = Gaussian(i,j) / result;
+        }
+    }
+}
+
 void MyOpenGL::initializeGL()
 {
     // Setup the rendering context , define display lists
     glClearColor(0,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    program = setup_shader("Shader/flat_vertexShader.vs","Shader/flat_fragmentShader.frag");
-    sun = add_obj(program , "image/sun.obj" , "image/sun.bmp");
+    program = setup_shader(current_vs.toStdString().c_str(),current_fs.toStdString().c_str());
+    sun = add_obj(program , image_obj.toStdString().c_str(),image_bmp.toStdString().c_str());
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
     // Setting light Position , camera Location
     lightPosition = QVector3D(10.0f,10.0f,10.0f);
     camera = QVector3D(30.0f , 30.0f , 30.0f);
+
+    // Build the fbo shader program
+    RTX_program = setup_shader("render_to_texture/RTX_vertexShader.vs","render_to_texture/RTX_fragmentShader.frag");
 }
 
 void MyOpenGL::resizeGL(int width, int height)
@@ -328,16 +396,31 @@ void MyOpenGL::resizeGL(int width, int height)
     QMatrix4x4 model;
     model.scale(1.0f);
     setVS(program,proj,view,model);
-    // Draw the scene - render (start)
-    render();
-    // render (end)
+    // Build the FrameBuffer
+    framebuffer = new QOpenGLFramebufferObject(this->width(),this->height(),GL_TEXTURE_2D);
+    vao = new QOpenGLVertexArrayObject();
+    vao->create();
+    vbo = new QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    vbo->create();
+    framebuffer->setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
 }
 
 void MyOpenGL::paintGL()
 {
     // When User call update , update will trigger paintGL()
     // Using an increasing integer to replace glfwGetTime()
-    current_value++;
+    if(rotate_speed > 0)
+    {
+        current_value++;
+    }
+    else{
+        current_value = 0;
+    }
+
+    framebuffer->bind();
+    glClearColor(0.1f,0.1f,0.1f,1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
     // ReColor
     setColorAttr(program,lightPosition,camera);
     QMatrix4x4 proj;
@@ -346,11 +429,52 @@ void MyOpenGL::paintGL()
     view.lookAt(camera,QVector3D(0,0,0),QVector3D(0,1,0));
     QMatrix4x4 model;
     // Setting Rotate
-    model.rotate((float)current_value*0.01f,0,1,0);
+    model.rotate((float)current_value*rotate_speed,0,1,0);
     // Transmit the matrices into shader
     setVS(program,proj,view,model);
-    // Draw the scene - render (start)
+    // Draw the scene - render the origin program (start)
+    // First Pass (draw by black board)
     render();
     // render (end)
+
+    // Second Pass (draw by white board)
+    framebuffer->release();
+    glClearColor(1.0f,1.0f,1.0f,1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+
+    // Bind the shader program
+    RTX_program->bind();
+    vao->bind();
+
+    // Setting the location of the window
+    QList<GLfloat> list;
+    list << -1.0f << 1.0f << 0.0f << 1.0f;
+    list << 1.0f << 1.0f << 1.0f << 1.0f;
+    list << 1.0f << -1.0f << 1.0f << 0.0f;
+
+    list << 1.0f << -1.0f << 1.0f << 0.0f;
+    list << -1.0f << 1.0f << 0.0f << 1.0f;
+    list << -1.0f << -1.0f << 0.0f << 0.0f;
+
+    vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+    vbo->bind();
+    vbo->allocate(list.toVector().data() , sizeof(GLfloat) * list.size() );
+
+    RTX_program->enableAttributeArray(0);
+    RTX_program->setAttributeBuffer(0,GL_FLOAT,0,2,4*sizeof(GLfloat));
+
+    RTX_program->enableAttributeArray(1);
+    RTX_program->setAttributeBuffer(1,GL_FLOAT,2*sizeof(GLfloat),2,4*sizeof(GLfloat));
+
+    // Bind the texture from the framebuffer's texture
+    glBindTexture(GL_TEXTURE_2D , framebuffer->texture());
+    RTX_program->setUniformValue(RTX_program->uniformLocation("HEIGHT"),(float)this->height());
+    RTX_program->setUniformValue(RTX_program->uniformLocation("GAUSSIAN"),Gaussian);
+    // Render it
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    vao->release();
+
+    //cout<< current_vs.toStdString().c_str() << " ; " << current_fs.toStdString().c_str() << endl;
 }
 

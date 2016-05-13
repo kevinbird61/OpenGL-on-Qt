@@ -13,16 +13,13 @@
 #include <QtWidgets/QAction>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QButtonGroup>
+#include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMainWindow>
-#include <QtWidgets/QMenuBar>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QSpinBox>
-#include <QtWidgets/QStatusBar>
-#include <QtWidgets/QTextEdit>
-#include <QtWidgets/QToolBar>
 #include <QtWidgets/QWidget>
 #include "mycombobox.h"
 #include "myopengl.h"
@@ -53,13 +50,12 @@ public:
     QLabel *label_8;
     QLabel *label_9;
     MyComboBox *comboBox_pic_src;
+    QSlider *ViewPos_X;
+    QLabel *label_10;
+    QSpinBox *spinBox_ViewPos_X;
+    QLabel *label_11;
+    QDoubleSpinBox *spinBox_Blur_Sigma;
     MyOpenGL *openGLWidget;
-    QGroupBox *groupBox;
-    QTextEdit *ShowTxt;
-    QLabel *label;
-    QMenuBar *menuBar;
-    QToolBar *mainToolBar;
-    QStatusBar *statusBar;
 
     void setupUi(QMainWindow *MainWindow)
     {
@@ -71,7 +67,7 @@ public:
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         EditOption = new QGroupBox(centralWidget);
         EditOption->setObjectName(QStringLiteral("EditOption"));
-        EditOption->setGeometry(QRect(820, 10, 251, 431));
+        EditOption->setGeometry(QRect(820, 10, 251, 581));
         comboBox = new MyComboBox(EditOption);
         comboBox->setObjectName(QStringLiteral("comboBox"));
         comboBox->setGeometry(QRect(10, 50, 231, 31));
@@ -136,30 +132,28 @@ public:
         comboBox_pic_src = new MyComboBox(EditOption);
         comboBox_pic_src->setObjectName(QStringLiteral("comboBox_pic_src"));
         comboBox_pic_src->setGeometry(QRect(10, 340, 231, 31));
+        ViewPos_X = new QSlider(EditOption);
+        ViewPos_X->setObjectName(QStringLiteral("ViewPos_X"));
+        ViewPos_X->setGeometry(QRect(100, 390, 101, 29));
+        ViewPos_X->setOrientation(Qt::Horizontal);
+        label_10 = new QLabel(EditOption);
+        label_10->setObjectName(QStringLiteral("label_10"));
+        label_10->setGeometry(QRect(10, 390, 81, 29));
+        spinBox_ViewPos_X = new QSpinBox(EditOption);
+        spinBox_ViewPos_X->setObjectName(QStringLiteral("spinBox_ViewPos_X"));
+        spinBox_ViewPos_X->setGeometry(QRect(200, 390, 48, 27));
+        label_11 = new QLabel(EditOption);
+        label_11->setObjectName(QStringLiteral("label_11"));
+        label_11->setGeometry(QRect(10, 440, 81, 17));
+        spinBox_Blur_Sigma = new QDoubleSpinBox(EditOption);
+        spinBox_Blur_Sigma->setObjectName(QStringLiteral("spinBox_Blur_Sigma"));
+        spinBox_Blur_Sigma->setGeometry(QRect(100, 440, 141, 27));
+        spinBox_Blur_Sigma->setMinimum(0.1);
+        spinBox_Blur_Sigma->setSingleStep(0.1);
         openGLWidget = new MyOpenGL(centralWidget);
         openGLWidget->setObjectName(QStringLiteral("openGLWidget"));
-        openGLWidget->setGeometry(QRect(9, 9, 800, 600));
-        groupBox = new QGroupBox(centralWidget);
-        groupBox->setObjectName(QStringLiteral("groupBox"));
-        groupBox->setGeometry(QRect(820, 450, 251, 81));
-        ShowTxt = new QTextEdit(groupBox);
-        ShowTxt->setObjectName(QStringLiteral("ShowTxt"));
-        ShowTxt->setGeometry(QRect(10, 40, 241, 31));
-        label = new QLabel(groupBox);
-        label->setObjectName(QStringLiteral("label"));
-        label->setGeometry(QRect(20, 20, 191, 20));
-        label->setAlignment(Qt::AlignCenter);
+        openGLWidget->setGeometry(QRect(0, 0, 800, 600));
         MainWindow->setCentralWidget(centralWidget);
-        menuBar = new QMenuBar(MainWindow);
-        menuBar->setObjectName(QStringLiteral("menuBar"));
-        menuBar->setGeometry(QRect(0, 0, 1080, 28));
-        MainWindow->setMenuBar(menuBar);
-        mainToolBar = new QToolBar(MainWindow);
-        mainToolBar->setObjectName(QStringLiteral("mainToolBar"));
-        MainWindow->addToolBar(Qt::TopToolBarArea, mainToolBar);
-        statusBar = new QStatusBar(MainWindow);
-        statusBar->setObjectName(QStringLiteral("statusBar"));
-        MainWindow->setStatusBar(statusBar);
 
         retranslateUi(MainWindow);
 
@@ -178,8 +172,8 @@ public:
         label_7->setText(QApplication::translate("MainWindow", "Light-Z:", 0));
         label_8->setText(QApplication::translate("MainWindow", "Picture obj Selection:", 0));
         label_9->setText(QApplication::translate("MainWindow", "Picture src Selection:", 0));
-        groupBox->setTitle(QApplication::translate("MainWindow", "Result Detail", 0));
-        label->setText(QApplication::translate("MainWindow", "Current Shading Model", 0));
+        label_10->setText(QApplication::translate("MainWindow", "Velocity:", 0));
+        label_11->setText(QApplication::translate("MainWindow", "Blur SIgma:", 0));
     } // retranslateUi
 
 };

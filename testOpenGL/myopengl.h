@@ -14,6 +14,8 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLTexture>
 #include <QMouseEvent>
+#include <QOpenGLFramebufferObject>
+#include <QtMath>
 
 using namespace std;
 
@@ -46,8 +48,10 @@ public:
     void reloadShader(const char *vertex_shader , const char *fragment_shader , const char *pic_obj , const char *pic_src);
     void releaseObject();
     void render();
+    void normalizeAndset(int x , int y);
 
     void mousePressEvent(QMouseEvent *e);
+    void mouseMoveEvent(QMouseEvent *e);
 public slots:
     void changeShader(QString string);
     void changeViewShader(int value);
@@ -56,27 +60,46 @@ public slots:
     void changeLightZPos(int value);
     void changePicSrc(QString string);
     void changePicObj(QString string);
+    void changeXModel(int value);
+    void changeSigma(double sigma);
 protected:
     void initializeGL();
     void resizeGL(int width , int height);
     void paintGL();
 private:
+    // Contain the objects , index in the shader program
     QList<Object_struct*> objects;
     QList<int> indicesCount;
+    // Currently program and render to texture program
     QOpenGLShaderProgram *program;
+    QOpenGLShaderProgram *RTX_program;
+
+    QOpenGLBuffer *vbo;
+    QOpenGLVertexArrayObject *vao;
+    // Updating the frame's timer
     QTimer *timer;
+    // Replace the origin - glfwGetTime()
     int current_value;
+    // For glm::vec3 , view point , view and light position in vertex shader
     QVector3D camera;
     QVector3D lookAt;
     QVector3D lightPosition;
+    // Keep the image for obj file and bmp file
     QString image_obj;
     QString image_bmp;
+    // Keep the current vertex shader and fragment shader
     QString current_vs;
     QString current_fs;
     QString temp_image;
     int sun;
     // For different picture source
     int filter;
+    // For rotate speed control
+    float rotate_speed;
+    // QGLFrameBufferObject
+    QOpenGLFramebufferObject *framebuffer;
+    // For Gaussian Blur sigma
+    QMatrix3x3 Gaussian;
 };
 
 #endif // MYOPENGL_H
